@@ -96,6 +96,17 @@ public class Program
             }).Build();
 
         using var scope = host.Services.CreateScope();
+        var inventoryDb = scope.ServiceProvider.GetRequiredService<InventoryDbContext>();
+        var orderingDb = scope.ServiceProvider.GetRequiredService<OrderingDbContext>();
+
+        Console.WriteLine("Applying Inventory database migrations...");
+        await inventoryDb.Database.MigrateAsync();
+
+        Console.WriteLine("Applying Ordering database migrations...");
+        await orderingDb.Database.MigrateAsync();
+
+        Console.WriteLine("Database migrations are current.");
+
         var app = scope.ServiceProvider.GetRequiredService<Application>();
         await app.DoWork();
         Log.CloseAndFlush();
