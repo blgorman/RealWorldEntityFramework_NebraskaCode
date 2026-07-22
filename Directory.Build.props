@@ -1,0 +1,17 @@
+<Project>
+    <PropertyGroup>
+        <TargetFrameworkVersion>net10.0</TargetFrameworkVersion>
+        <MicrosoftEntityFrameworkCoreVersion>10.0.8</MicrosoftEntityFrameworkCoreVersion>
+        <MicrosoftEntityFrameworkCoreSqlServerVersion>10.0.8</MicrosoftEntityFrameworkCoreSqlServerVersion>
+        <MicrosoftEntityFrameworkCoreToolsVersion>10.0.8</MicrosoftEntityFrameworkCoreToolsVersion>
+        <MicrosoftEntityFrameworkCoreDesignVersion>10.0.8</MicrosoftEntityFrameworkCoreDesignVersion>
+        <MicrosoftExtensionsConfigurationVersion>10.0.8</MicrosoftExtensionsConfigurationVersion>
+        <MicrosoftExtensionsConfigurationJsonVersion>10.0.8</MicrosoftExtensionsConfigurationJsonVersion>
+        <MicrosoftExtensionsEnvironmentVariablesConfigurationVersion>10.0.8</MicrosoftExtensionsEnvironmentVariablesConfigurationVersion>
+        <MicrosoftExtensionsConfigurationUserSecretsVersion>10.0.8</MicrosoftExtensionsConfigurationUserSecretsVersion>
+        <MicrosoftEntityFrameworkCoreProxiesVersion>10.0.8</MicrosoftEntityFrameworkCoreProxiesVersion>
+        <MicrosoftExtensionsDependencyInjectionVersion>10.0.8</MicrosoftExtensionsDependencyInjectionVersion>
+        <MicrosoftExtensionsHostingVersion>10.0.8</MicrosoftExtensionsHostingVersion>
+        <AutoMapperVersion>15.0.1</AutoMapperVersion>
+    </PropertyGroup>
+</Project>
