@@ -16,23 +16,16 @@ public partial class InventoryDbContext : DbContext
     public DbSet<Genre> Genres { get; set; }
     public DbSet<JunkToBulkDelete> JunkToBulkDeletes { get; set; }
 
-    private LoggingCommandInterceptor _loggingInterceptor;
-    private SoftDeleteInterceptor _softDeleteInterceptor;
-
     protected InventoryDbContext()
         : base()
     {
         Configure();
     }
 
-    public InventoryDbContext(DbContextOptions<InventoryDbContext> options
-                                , LoggingCommandInterceptor loggingInterceptor
-                                , SoftDeleteInterceptor softDeleteInterceptor)
+    public InventoryDbContext(DbContextOptions<InventoryDbContext> options)
         : base(options)
     {
         Configure();
-        _loggingInterceptor = loggingInterceptor;
-        _softDeleteInterceptor = softDeleteInterceptor;
     }
 
     private void Configure()

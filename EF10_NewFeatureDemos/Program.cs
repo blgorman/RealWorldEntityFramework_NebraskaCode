@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Serilog;
 using Serilog.Events;
 
@@ -16,7 +17,7 @@ public class Program
         var environment = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT") ?? "Development";
         //TODO: Toggle this to turn interceptors on or off to see them in action
         var useInterceptors = Environment.GetEnvironmentVariable("USE_INTERCEPTORS") ?? "true";
-        var logToConsole = Environment.GetEnvironmentVariable("LOG_TO_CONSOLE") ?? "false"; //only works for queries when the interceptor is on
+        var logToConsole = Environment.GetEnvironmentVariable("LOG_TO_CONSOLE") ?? "true"; //only works for queries when the interceptor is on
         var appSettingsFile = string.IsNullOrWhiteSpace(environment)
             ? "appsettings.json"
             : $"appsettings.{environment}.json";
@@ -63,27 +64,25 @@ public class Program
             .ConfigureServices((context, services) =>
             {
                 var connectionString = context.Configuration.GetConnectionString("InventoryDbConnection");
-                // Register interceptors only when toggle is on
-                services.AddSingleton<LoggingCommandInterceptor>();
-                services.AddSingleton<SoftDeleteInterceptor>();
-
                 if (useInterceptors.Equals("true", StringComparison.OrdinalIgnoreCase))
                 {
-
-                    services.AddDbContext<InventoryDbContext>((serviceProvider, options) =>
-                    {
-                        options.UseSqlServer(connectionString)
-                               .AddInterceptors(
-                                   serviceProvider.GetRequiredService<LoggingCommandInterceptor>(),
-                                   serviceProvider.GetRequiredService<SoftDeleteInterceptor>());
-                    });
+                    services.AddSingleton(serviceProvider => new LoggingCommandInterceptor(
+                        serviceProvider.GetRequiredService<ILoggerFactory>(),
+                        writeCalloutToConsole: logToConsole.Equals("true", StringComparison.OrdinalIgnoreCase)));
+                    services.AddSingleton<SoftDeleteInterceptor>();
                 }
-                else
+
+                services.AddDbContext<InventoryDbContext>((serviceProvider, options) =>
                 {
-                    services.AddDbContextFactory<InventoryDbContext>(options =>
-                        options.UseSqlServer(connectionString));
+                    options.UseSqlServer(connectionString);
 
-                }
+                    if (useInterceptors.Equals("true", StringComparison.OrdinalIgnoreCase))
+                    {
+                        options.AddInterceptors(
+                            serviceProvider.GetRequiredService<LoggingCommandInterceptor>(),
+                            serviceProvider.GetRequiredService<SoftDeleteInterceptor>());
+                    }
+                });
 
                 // The Ordering bounded context shares the database but keeps its own
                 // schema, its own migrations folder (Migrations/Ordering), and its own

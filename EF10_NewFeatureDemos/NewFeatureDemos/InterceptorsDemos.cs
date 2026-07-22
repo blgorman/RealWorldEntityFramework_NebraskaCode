@@ -78,15 +78,19 @@ public class InterceptorsDemos : IAsyncDemo
         Console.WriteLine("Logging Interceptor");
         Console.WriteLine("Run the program without the interceptors turned on and check the logs.");
         Console.WriteLine("Then run the program with the interceptors turned on and check the logs again.");
-        Console.WriteLine("With the interceptor on, you should see the SQL commands and query compilation logs.");
-        Console.WriteLine("Note that by default this would have been logged, but I configured this to not log unless the interceptor is on.");
-
-        var items = _db.Items
-                        .Where(i => EF.Functions.Like(i.ItemName, "%lord%"))
-                        .OrderBy(i => i.ItemName)
-                        .Select(i => new { i.Id, i.ItemName });
+        Console.WriteLine("With the interceptor on, you should see SQL command messages prefixed with [LoggingCommandInterceptor].");
+        Console.WriteLine("The normal EF command logs are suppressed so the custom interceptor output is easy to identify.");
 
         Console.WriteLine("Executing query...");
+        Console.WriteLine("----- INTERCEPTOR LOG OUTPUT START -----");
+
+        var items = await _db.Items
+                        .Where(i => EF.Functions.Like(i.ItemName, "%lord%"))
+                        .OrderBy(i => i.ItemName)
+                        .Select(i => new { i.Id, i.ItemName })
+                        .ToListAsync();
+
+        Console.WriteLine("----- INTERCEPTOR LOG OUTPUT END -------");
         Console.WriteLine("Query results:");
         Console.WriteLine(ConsolePrinter.PrintBoxedList(items, j => $"{j.Id}: {j.ItemName}"));
 
@@ -99,8 +103,8 @@ public class InterceptorsDemos : IAsyncDemo
     {
         Console.WriteLine("Soft Delete Interceptor");
         Console.WriteLine("When the interceptors are on, all delete operations will be converted to modification (update) and set the IsDeleted flag to '1'");
-        Console.WriteLine("Run once without the interceptor for full delete");
-        Console.WriteLine("Run again with the interceptor to see soft delete in action");
+        Console.WriteLine("With interceptors OFF, the test row will be physically deleted.");
+        Console.WriteLine("With interceptors ON, the test row will remain with IsDeleted = true.");
 
 
         Console.WriteLine(ConsolePrinter.PrintFormattedMessage("All Categories with filter status", "All Categories"));
@@ -119,17 +123,50 @@ public class InterceptorsDemos : IAsyncDemo
         //add it
         _db.Categories.Add(cat);
         await _db.SaveChangesAsync();
+        var categoryId = cat.Id;
 
         //now delete it (should be a soft delete)
         //(put a breakpoint on SaveChangesAsync in the interceptor to see it hit)
         _db.Categories.Remove(cat);
         await _db.SaveChangesAsync();
 
-        //--------------------------------------------------
-        Console.WriteLine(ConsolePrinter.PrintFormattedMessage("Current Categories with filters applied", "Categories no filters"));
-        var currentCategories = await _db.Categories.ToListAsync();
-        Console.WriteLine(ConsolePrinter.PrintBoxedList(currentCategories
-            , c => $"{c.Id}: {c.CategoryName} [IS Deleted: {c.IsDeleted}] - [Is Active {c.IsActive}]"));
+        // Ensure the verification comes from the database rather than a tracked entity.
+        _db.ChangeTracker.Clear();
+
+        // The normal Category query hides soft-deleted rows, so bypass its filters to
+        // distinguish a physical delete from a soft delete.
+        var categoriesAfterDelete = await _db.Categories
+            .IgnoreQueryFilters()
+            .OrderBy(c => c.Id)
+            .ToListAsync();
+
+        var deletedCategory = categoriesAfterDelete.SingleOrDefault(c => c.Id == categoryId);
+
+        Console.WriteLine(ConsolePrinter.PrintFormattedMessage(
+            $"All database rows after deleting category ID {categoryId}",
+            "All Categories After Delete"));
+        Console.WriteLine(ConsolePrinter.PrintBoxedList(categoriesAfterDelete,
+            c => $"{c.Id}: {c.CategoryName} [IS Deleted: {c.IsDeleted}] - [Is Active {c.IsActive}]"));
+
+        if (deletedCategory is null)
+        {
+            Console.WriteLine("PHYSICAL DELETE: The row no longer exists in the database (interceptors OFF).");
+        }
+        else if (deletedCategory.IsDeleted)
+        {
+            Console.WriteLine(
+                $"SOFT DELETE: The row still exists with IsDeleted = {deletedCategory.IsDeleted} (interceptors ON).");
+            Console.WriteLine(
+                $"{deletedCategory.Id}: {deletedCategory.CategoryName} [IsDeleted: {deletedCategory.IsDeleted}] - [IsActive: {deletedCategory.IsActive}]");
+
+            var visibleWithFilters = await _db.Categories.AnyAsync(c => c.Id == categoryId);
+            Console.WriteLine($"Visible through the normal filtered query: {visibleWithFilters}");
+        }
+        else
+        {
+            Console.WriteLine(
+                $"UNEXPECTED RESULT: The row still exists, but IsDeleted = {deletedCategory.IsDeleted}.");
+        }
 
         Console.WriteLine("Soft Delete Interceptor Completed");
 

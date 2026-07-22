@@ -15,6 +15,9 @@ public class Application
 
     public async Task DoWork()
     {
+        Console.WriteLine("Press any key to continue...");
+        Console.ReadKey();
+
         Console.WriteLine("Welcome to the New Feature Demos");
 
         await _menu.ShowAsync();
